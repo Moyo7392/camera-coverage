@@ -232,6 +232,47 @@ if __name__ == "__main__":
             self.assertTrue(cameras_suffice(target, strips))
             self.assertFalse(cameras_suffice(target, strips[:2000] + strips[2001:]))
 
+        def test_overlapping_cameras_remain_covered_when_one_expires(self):
+            hardware = [camera(0, 7, 0, 6), camera(0, 4, 4, 10),
+                        camera(4, 10, 3, 10), camera(7, 10, 0, 5)]
+            self.assertTrue(cameras_suffice(self.target, hardware))
+            # Removing the last camera leaves a low-light hole after distance 7.
+            self.assertFalse(cameras_suffice(self.target, hardware[:-1]))
+
+        def test_grid_tiles_with_duplicates_and_one_interior_hole(self):
+            size = 20
+            target = camera(0, size, 0, size)
+            tiles = [camera(x, x + 1, y, y + 1)
+                     for x in range(size) for y in range(size)]
+            random.Random(27).shuffle(tiles)
+            self.assertTrue(cameras_suffice(target, tiles * 2))
+            incomplete = [c for c in tiles if c != camera(9, 10, 9, 10)]
+            self.assertFalse(cameras_suffice(target, incomplete * 2))
+
+        def test_tree_update_invariant_against_plain_counts(self):
+            rng = random.Random(28)
+            for size in (1, 2, 3, 17, 64):
+                tree = _CoverageTree(size)
+                counts = [0] * size
+                active = []
+                for _ in range(1000):
+                    if active and rng.random() < 0.5:
+                        start, end = active.pop(rng.randrange(len(active)))
+                        delta = -1
+                    else:
+                        start, end = sorted(rng.choices(range(size), k=2))
+                        active.append((start, end))
+                        delta = 1
+                    tree.add(start, end, delta)
+                    for i in range(start, end + 1):
+                        counts[i] += delta
+                    self.assertEqual(tree.minimum[1], min(counts))
+                    self.assertEqual(tree.fully_covered, min(counts) > 0)
+                # Every addition has a matching removal, including duplicates.
+                for start, end in active:
+                    tree.add(start, end, -1)
+                self.assertEqual(tree.minimum[1], 0)
+
         def test_seeded_small_cases_against_independent_oracle(self):
             # Generated endpoints are integers. A half-unit lattice hits every
             # edge and every open cell in their arrangement, so it is an exact

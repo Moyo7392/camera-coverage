@@ -98,7 +98,9 @@ generated tests; the production function works on continuous ranges.
 The generated cases also check invariance under reordered input, duplicated
 cameras, and exchanging the distance/light axes. Additional regressions cover
 simultaneous starts/ends, point cameras, adjacent floating-point endpoints,
-and 4,000 strips with and without one missing strip. All 15 tests run with the
+and 4,000 strips with and without one missing strip. Further checks exercise
+overlapping cameras as others expire, a 400-tile grid with an interior hole,
+and 5,000 segment-tree updates/removals compared against a plain count array. All 18 tests run with the
 standard library using the command above.
 
 ### Research
@@ -122,3 +124,13 @@ revision on adjacent full-height strips (median of five runs):
 This is one workload, not a universal speed claim or a timing-based test. The
 small case shows the added setup cost; the larger cases expose repeated scans
 in the original. Correctness tests, rather than these timings, gate the change.
+
+### Why retain the sweep after review?
+
+The question gives no bound on the number of proposed cameras. Retaining the
+sweep removes repeated full scans while preserving the same public API. The tree
+is private and exposes only range increments and a coverage query. Its invariant
+is tested directly against a plain array, in addition to end-to-end oracle tests.
+There is no claim that this is the only good solution: the original slab merge
+is easier to maintain when camera lists are known to be small. Both versions
+remain available in the commit history.
